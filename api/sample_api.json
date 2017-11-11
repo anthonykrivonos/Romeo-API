@@ -1,0 +1,41 @@
+User
+{
+      "id": 13412341234,
+      "name": "Bob J. Doe",
+      "challenges": [
+            0,
+            1,
+            2
+      ],
+      "invitations (optional)": [
+            {
+                  "challenger_id": 13412341234,
+                  "date_created": 1401203435,
+                  "text": "Hi! I challenge you to a d-d-d-d-d-challenge!",
+                  "challenge_id": 13412341234
+            }
+      ],
+      "score": "A"
+}
+
+Challenge
+{
+      "id": 4,
+      "name": "Ice Bucket Challenge",
+      "creator_id": 13412341234,
+      "audio": "https://aws.link.lol/523",
+      "transcript": "I'm Anthony and this is my ice bucket challenge!",
+      "submissions": [
+            {
+                  "id": 13412341234,
+                  "audio": "https://aws.link.lol/134",
+                  "transcript": "I'm Blanthony and this is Sparta!",
+                  "scores": {
+                        "accuracy": 62,
+                        "sentiment": 91
+                  },
+                  "score": "A",
+                  "date_created": 1401103435
+            }
+      ]
+}
