@@ -6,23 +6,54 @@ const app = express();
 const fs = require('fs');
 app.use(bodyParser.json());
 app.use(morgan('common'));
+
 const {MSKEY, BEYONDKEY} = require('./config');
 
 var basepath = './ML/Microsoft/';
-var sample3_mp3 = basepath + 'sample3.mp3';
-var looong16khz = basepath + 'audition lowqual.wav';
+var sample3_mp3 = basepath + 'looooong.m4a';
+var looong16khz = basepath + 'audition-lowqual.wav';
+
+var ffmpeg = require('ffmpeg');
+/*
+try {
+  var process = new ffmpeg(looong16khz);
+  process.then(function(audio) {
+    console.log('The audio is ready to be processed');
+    audio
+      // .setAudioCodec('pcm_f16le') // causes an error... look into this
+      .setAudioFrequency(16)
+      .setAudioChannels(1)
+      .setAudioBitRate(16)
+      .save(looong16khz + "modified3.wav", function (err, file) {
+        if (!err)
+          console.log('Audio file: ' + file);
+        else
+          console.error("err while saving\n" + err);
+      })
+  }, function(err) {
+    console.log("Error: " + err);
+  });
+} catch (e) {
+  console.log(e.code);
+  console.log(e.msg);
+}
+*/
+
 
 var Analyzer = require('./analyzer-v3')
 
 var analyzer = new Analyzer(BEYONDKEY);
+var ffmpegpath = basepath + "audition-lowqual.wavmodified.wav";
 
-analyzer.analyze(fs.createReadStream(looong16khz),function(err,analysis){
+analyzer.analyze(fs.createReadStream(ffmpegpath),function(err,analysis){
   if (err) {
     console.error(err);
   }
-  console.log(analysis.analysisSegments);
+  console.log(analysis);
 
  });
+
+
 
 /*
 // TODO: MOVE AUDIO FORMATTING STUFF TO ITS OWN FILE
