@@ -10,17 +10,17 @@ const {MSKEY, BEYONDKEY} = require('./config');
 
 var basepath = './ML/Microsoft/';
 var sample3_mp3 = basepath + 'sample3.mp3';
-var sample2_wav16 = basepath + 'steven2 16kHz 16bit mono.wav';
+var looong16khz = basepath + 'audition lowqual.wav';
 
 var Analyzer = require('./analyzer-v3')
 
 var analyzer = new Analyzer(BEYONDKEY);
 
-analyzer.analyze(fs.createReadStream(sample2_wav16),function(err,analysis){
+analyzer.analyze(fs.createReadStream(looong16khz),function(err,analysis){
   if (err) {
     console.error(err);
   }
-  console.log(analysis);
+  console.log(analysis.analysisSegments);
 
  });
 
