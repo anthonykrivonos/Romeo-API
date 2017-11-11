@@ -1,6 +1,6 @@
-# Romeo #
+# Romeo Web API #
 
-> HackPrinceton submission where users create competing renditions of audio files.
+> Web App portion of HackPrinceton submission where users create competing renditions of audio files. 
 
 Developed By
 
