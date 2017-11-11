@@ -2,14 +2,49 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const morgan = require('morgan');
 const http = require('http');
-
-const {MSKEY} = require('./config');
-
 const app = express();
+const fs = require('fs');
 app.use(bodyParser.json());
 app.use(morgan('common'));
+const {MSKEY, BEYONDKEY} = require('./config');
 
-var basepath = './ML/Microsoft/'
+var basepath = './ML/Microsoft/';
+var sample3_mp3 = basepath + 'sample3.mp3';
+var sample2_wav16 = basepath + 'steven2 16kHz 16bit mono.wav';
+
+var Analyzer = require('./analyzer-v3')
+
+var analyzer = new Analyzer(BEYONDKEY);
+
+analyzer.analyze(fs.createReadStream(sample2_wav16),function(err,analysis){
+  if (err) {
+    console.error(err);
+  }
+  console.log(analysis);
+
+ });
+
+/*
+// TODO: MOVE AUDIO FORMATTING STUFF TO ITS OWN FILE
+var audioStack = [];
+
+// https://www.npmjs.com/package/node-wav
+let wav = require('node-wav');
+
+let buffer = fs.readFileSync('')
+
+audioContext.decodeAudioData(resp, buffer => {
+  let wav = toWav(buffer);
+  var chunk = new Uint8Array(wav);
+  // console.log(chunk);
+  fs.appendFile((basepath + 'bb.wav'), new Buffer(chunk), function(err) {
+    console.error(err);
+  });
+});
+
+
+// TODO: MOVE THIS STUFF TO ITS OWN FILE
+basepath = './ML/Microsoft/'
 var samplePath = basepath + 'stevensample 16kHz 16bit mono.wav';
 var sample2 = basepath + 'steven2 16kHz 16bit mono.wav';
 var sample3 = basepath + 'sample3.wav';
@@ -42,28 +77,6 @@ socket.start((error, service) =>{
 
   // service.sendFile(samplePath);
   // service.sendFile(sample2)
-  service.sendFile(sample3);
-})
-
-/*
-const recognizer = new speechService(options);
-recognizer.start((error, service) => {
-  if (!error) {
-    console.log('service started');
-
-    service.on('recognition', (message) => {
-      console.log('new recognition:', message);
-    });
-
-    service.on('close', () => {
-      console.log('Speech API connection closed');
-    });
-
-    service.on('error', (error) => {
-      console.log(error);
-    });
-
-    service.sendFile(samplePath);
-  }
+  // service.sendFile(sample3);
 });
 */
