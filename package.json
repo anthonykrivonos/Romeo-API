@@ -23,6 +23,8 @@
     "node-wav": "0.0.2",
     "waveheader": "0.0.2",
     "web-audio-api": "^0.2.2",
-    "xhr": "^2.4.0"
+    "xhr": "^2.4.0",
+    "youtube-mp3": "^0.1.2",
+    "youtube-mp3-downloader": "^0.5.1"
   }
 }
