@@ -59,17 +59,6 @@ var dl = new Downloader(); //var Downloader = require("./downloader");
 
 var i = 0;
 
-// change videoId and leave name out (to use default name)
-dl.getMP3({videoId: "EUGeQd6J968", name:"weeknd_dank.mp3"}, function (err, res) {
-    i++;
-    if(err)
-        throw err;
-    else{
-        console.log("Song " + i + " was downloaded: " + res.file);
-        downsample(res.file);
-    }
-});
-
 // lower sample
 function downsample(starting_audio_path) {
   try {

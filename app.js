@@ -1,20 +1,19 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const morgan = require('morgan');
-const http = require('http');
 const app = express();
 const fs = require('fs');
 const util = require('util')
 const mime = require('mime');
 
-// const ffmpeg = require('@ffmpeg-installer/ffmpeg');
-// console.log(ffmpeg.path, ffmpeg.version);
-
 app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
+const ffmpeg = require('ffmpeg');
 
 const {Downloader} = require('./ytdownload')
+
+const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
 
 var firebase = require('firebase');
 
@@ -41,18 +40,9 @@ const gcs = require('@google-cloud/storage')({
 const bucket = gcs.bucket(bucketName);
 function createPublicFileURL(storageName) {
       return `http://storage.googleapis.com/${bucketName}/${encodeURIComponent(storageName)}`;
-
 }
 
-// app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
-
-// const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
-// var ffmpeg = require('ffmpeg');
-// var ffmpeg2 = require('fluent-ffmpeg');
-
-var basepath = './ML/Microsoft/';
-var sample3_mp3 = basepath + 'looooong.m4a';
-var looong16khz = basepath + 'steven2 16kHz 16bit mono.wav';
+// var looong16khz = basepath + 'steven2 16kHz 16bit mono.wav';
 var ffmpegpath = "./audio/processedaudio/newman.wav";
 
 var audiodest = './audio/processedaudio/'
@@ -70,15 +60,13 @@ app.post('/rendition', (req, res) => {
       globalresponse = res;
       var writepath = "./audio/processedaudio/anthonytest.wav";
 
-      if (!req.files)
-      return res.status(400).send('No files were uploaded');
+      if (!req.files) return res.status(400).send('No files were uploaded');
 
       console.log("req.files:\n" + util.inspect(req.files, false, null));
       let speechAudio = req.files.audio;
 
       speechAudio.mv(writepath, function(err) {
-            if (err)
-            return res.status(500).send(err);
+            if (err) return res.status(500).send(err);
             downsample(writepath, res);
       })
 
@@ -104,7 +92,7 @@ app.post('/challenge', (req, res) => {
             }
       }
       video_url = temp;
-      console.log(video_url);
+      console.log("Video url: " + video_url);
 
       dl.getMP3({videoId: video_url, name:"ytdload.mp3"}, function (err, res) {
             if(err)
@@ -118,99 +106,33 @@ app.post('/challenge', (req, res) => {
 
 // processingObj.audio = req.body.audio;
 function downsample(starting_audio_path, res, uploadname) {
-      try {
-            console.log("start encode time: " + Date.now())
+      console.log("start encode time: " + Date.now())
 
-            var process = new ffmpeg(starting_audio_path);
-            process
-            .then(function(audio) {
-                  console.log(audio.metadata)
-                  console.log('The audio is ready to be processed');
-                  audio
-                  .setAudioFrequency(16000)
-                  .setAudioChannels(1)
-                  .setAudioBitRate(16)
-                  .save("./audio/processedaudio/anthonytest2.wav", function (err, file) {
-                        if (!err)
-                        console.log('Audio file: ' + file);
-                        else
-                        console.error("err while saving\n" + err);
-                        // below will crash the program when the chunk error comes back
-                        // performAnalysis("./audio/processedaudio/anthonytest2.wav");
-                        setTimeout(function() {
-                              msanalysis("./audio/processedaudio/anthonytest2.wav", res, uploadname);
-                        }, 200);
-                  })
-                  console.log("end encode time: " + Date.now());
-            }, function(err) {
-                  console.log("Error: " + err);
+      var process = new ffmpeg(starting_audio_path);
+      process
+      .then(function(audio) {
+            console.log("Audio file metadata:" + audio.metadata)
+            console.log('The audio is ready to be processed');
+            audio
+            .setAudioFrequency(16000)
+            .setAudioChannels(1)
+            .setAudioBitRate(16)
+            .save("./audio/processedaudio/anthonytest2.wav", function (err, file) {
+                  if (!err)
+                  console.log('Audio file: ' + file);
+                  else
+                  console.error("err while saving\n" + err);
+                  // below will crash the program when the chunk error comes back
+                  // performAnalysis("./audio/processedaudio/anthonytest2.wav");
+                  setTimeout(function() {
+                        msanalysis("./audio/processedaudio/anthonytest2.wav", res, uploadname);
+                  }, 200);
             });
-      } catch (e) {
-            console.log(e.code);
-            console.log(e.msg);
-      }
+            console.log("end encode time: " + Date.now());
+      }).catch(function(err) {
+            console.log("Error: " + err);
+      });
 };
-
-
-// function startFormatAndAnalysis(path1) {
-//   // save path1 as a file, pass path to below function
-//   encode1("./audio/processedaudio/anthonytest.wav");
-// }
-// startFormatAndAnalysis("words");
-
-// var performAnalysis = false;
-
-// function encode1(path1) {
-//
-//   // reason for this section:
-//   // https://stackoverflow.com/questions/40233300/how-to-change-mp3-file-to-wav-file-in-node-js
-//   ffmpeg2(path1)
-//     .toFormat('wav')
-//     .on('error', function (err) {
-//         console.log('An error occurred: ' + err.message);
-//     })
-//     .on('progress', function (progress) {
-//         // console.log(JSON.stringify(progress));
-//         console.log('Processing: ' + progress.targetSize + ' KB converted');
-//     })
-//     .on('end', function () {
-//         console.log('Processing finished !');
-//         ffmpegmain(path1 + "step1.wav");
-//     })
-//     .save(path1 + "step1.wav", function() {
-//     })
-// }
-// function ffmpegmain(inputAudio) {
-//   try {
-//     console.log("start encode time: " + Date.now())
-//
-//     var process = new ffmpeg(inputAudio);
-//     process
-//       .then(function(audio) {
-//         console.log(audio.metadata)
-//         console.log('The audio is ready to be processed');
-//         audio
-//           .setAudioFrequency(16000)
-//           .setAudioChannels(1)
-//           .setAudioBitRate(16)
-//           .save(inputAudio+"step2.wav", function (err, file) {
-//             if (!err)
-//               console.log('Audio file: ' + file);
-//             else
-//               console.error("err while saving\n" + err);
-//           })
-//           .then(function() {
-//             performAnalysis(inputAudio+"step2.wav");
-//           })
-//           console.log("end encode time: " + Date.now());
-//       }, function(err) {
-//         console.log("Error: " + err);
-//       });
-//   } catch (e) {
-//     console.log(e.code);
-//     console.log(e.msg);
-//   }
-// }
 
 function performAnalysis(path_to_audio) {
 
@@ -229,9 +151,6 @@ function performAnalysis(path_to_audio) {
       });
 }
 
-// var text = getText(('./ML/Microsoft/' + 'sample3.wav'));
-// console.log(text);
-
 // MICROSOFT SPEECH TO TEXT THINGS
 
 const options = {
@@ -249,12 +168,12 @@ function msanalysis(ffmpegpath, res, uploadname) {
 
             service.on('recognition', (e) => {
                   if (e.RecognitionStatus === 'Success') {
-                        console.log(e);
+                        console.log("status" + e);
                         dictation_text+=e.DisplayText;
                   }
             });
             service.on('error', (error) => {
-                  console.log(error);
+                  console.log("Error in MS Analysis"+error);
             });
             service.on('speech.startDetected', () => {
                   console.log('speech startDetected has fired.');
@@ -271,8 +190,6 @@ function msanalysis(ffmpegpath, res, uploadname) {
             service.on('turn.end', () => {
                   console.log('speech turn ended. text is:\n'+dictation_text);
 
-                  // var storageRef = firebase.storage().ref();
-                  // var uploadTask = storageRef.child(ffmpegpath).put(file);
                   const filePath = ffmpegpath;
                   const uploadTo = `audio/processedaudio.wav`;
                   const fileMime = mime.getType(filePath);
@@ -291,10 +208,11 @@ function msanalysis(ffmpegpath, res, uploadname) {
 
                   if (uploadname === undefined) {
                         uploadname = 'romeoaudio';
+                        uploadname+= Date.now();
                   }
 
                   var publicURL = createPublicFileURL(uploadname);
-                  console.log(publicURL);
+                  console.log("public url: " + publicURL);
 
                   var returnobj = {
                         audio_url: publicURL, // fill in with aws link
