@@ -44,7 +44,7 @@ function createPublicFileURL(storageName) {
 
 const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
 var ffmpeg = require('ffmpeg');
-var ffmpeg2 = require('fluent-ffmpeg');
+// var ffmpeg2 = require('fluent-ffmpeg');
 
 var basepath = './ML/Microsoft/';
 var sample3_mp3 = basepath + 'looooong.m4a';
