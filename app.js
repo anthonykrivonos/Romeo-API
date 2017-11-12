@@ -10,6 +10,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
 
+const {Downloader} = require('./ytdownload')
 
 var firebase = require('firebase');
 
@@ -75,19 +76,41 @@ app.post('/rendition', (req, res) => {
     downsample(writepath, res);
   })
 
-  /*
-  var writepath = "./audio/processedaudio/anthonytest.wav";
-  var writeStream = fs.createWriteStream(writepath);
-  req.pipe(writeStream);
-  writeStream.on('finish', function() {
-    downsample(writepath);
-  })
-  */
-  // fs.writeFile(writepath, req.body, downsample(writepath));
-
 });
+
+app.post('/challenge', (req, res) => {
+  var dl = new Downloader();
+  var video_url = req.body.video_url;
+
+  var temp = "";
+  var write = false;
+  for (var i = 0; i < video_url.length; i++) {
+    if (video_url[i]=== '=') {
+      write = true;
+      continue;
+    }
+    if (video_url[i]==='/' && write) {
+      break;
+    }
+    if (write) {
+      temp+= video_url[i];
+    }
+  }
+  video_url = temp;
+  console.log(video_url);
+
+  dl.getMP3({videoId: video_url, name:"ytdload.mp3"}, function (err, res) {
+      if(err)
+          throw err;
+      else{
+          console.log("Song " + i + " was downloaded: " + res.file);
+          downsample(res.file, res, 'foryt');
+      }
+  });
+})
+
 // processingObj.audio = req.body.audio;
-function downsample(starting_audio_path, res) {
+function downsample(starting_audio_path, res, uploadname) {
   try {
     console.log("start encode time: " + Date.now())
 
@@ -108,7 +131,7 @@ function downsample(starting_audio_path, res) {
             // below will crash the program when the chunk error comes back
             // performAnalysis("./audio/processedaudio/anthonytest2.wav");
             setTimeout(function() {
-              msanalysis("./audio/processedaudio/anthonytest2.wav", res);
+              msanalysis("./audio/processedaudio/anthonytest2.wav", res, uploadname);
             }, 200);
           })
           console.log("end encode time: " + Date.now());
@@ -213,7 +236,7 @@ const socket = new speechService(options);
 
 var dictation_text = "";
 
-function msanalysis(ffmpegpath, res) {
+function msanalysis(ffmpegpath, res, uploadname= "") {
   socket.start((error, service) =>{
     console.log('service started');
 
@@ -258,7 +281,12 @@ function msanalysis(ffmpegpath, res) {
         }
         console.log(createPublicFileURL(uploadTo));
       })
-      var publicURL = createPublicFileURL('romeoaudio');
+
+      if (uploadname.length === 0) {
+        uploadname = 'romeoaudio';
+      }
+
+      var publicURL = createPublicFileURL(uploadname);
       console.log(publicURL);
 
       var returnobj = {

@@ -51,7 +51,8 @@ Downloader.prototype.getMP3 = function(track, callback){
     self.YD.download(track.videoId, track.name);
 };
 
-module.exports = Downloader;
+exports.Downloader = Downloader;
+exports.dl = dl;
 
 // use this below code, with some modifications, in other places to download videos
 var dl = new Downloader(); //var Downloader = require("./downloader");
