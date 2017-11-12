@@ -10,11 +10,6 @@ const mime = require('mime');
 // const ffmpeg = require('@ffmpeg-installer/ffmpeg');
 // console.log(ffmpeg.path, ffmpeg.version);
 
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-const spawn = require('child_process').spawn;
-const ffmpeg = spawn(ffmpegPath, args);
-ffmpeg.on('exit', onExit);
-
 app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
