@@ -5,6 +5,7 @@ const http = require('http');
 const app = express();
 const fs = require('fs');
 const util = require('util')
+const mime = require('mime');
 app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
@@ -22,7 +23,20 @@ var config = {
   storageBucket: ""
 };
 firebase.initializeApp(config);
+const keyFilename = './romeo-2025b-firebase-adminsdk-ssrw8-d611e232d1.json'
+const projectId = config.projectId;
+const bucketName = `${projectId}.appspot.com`;
 
+const gcs = require('@google-cloud/storage')({
+  projectId,
+  keyFilename
+});
+
+const bucket = gcs.bucket(bucketName);
+function createPublicFileURL(storageName) {
+    return `http://storage.googleapis.com/${bucketName}/${encodeURIComponent(storageName)}`;
+
+}
 
 // app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 
@@ -226,18 +240,32 @@ function msanalysis(ffmpegpath, res) {
 
     service.on('turn.end', () => {
       console.log('speech turn ended. text is:\n'+dictation_text);
-      // do AWS upload of data
+
+      // var storageRef = firebase.storage().ref();
+      // var uploadTask = storageRef.child(ffmpegpath).put(file);
+      const filePath = ffmpegpath;
+      const uploadTo = `audio/processedaudio.wav`;
+      const fileMime = mime.getType(filePath);
+
+      bucket.upload(filePath,{
+        destination:uploadTo,
+        public:true,
+        metadata: {contentType: fileMime,cacheControl: "public, max-age=300"}
+      }, function(err, file) {
+        if(err) {
+          console.log(err);
+          return;
+        }
+        console.log(createPublicFileURL(uploadTo));
+      })
+      var publicURL = createPublicFileURL('romeoaudio');
+      console.log(publicURL);
+
       var returnobj = {
-        audio_url: "testdata", // fill in with aws link
+        audio_url: publicURL, // fill in with aws link
         transcript: dictation_text,
         score: 'B'
       }
-
-      var storageRef = firebase.storage().ref();
-      var mountainsRef = storageRef.child(ffmpegpath);
-      var file = new File()
-      ref.put()
-
 
       // send back to him
       res.status(200).json(returnobj);
