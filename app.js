@@ -1,69 +1,246 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const morgan = require('morgan');
-const http = require('http');
-
-const {MSKEY} = require('./config');
-
 const app = express();
+const fs = require('fs');
+const util = require('util')
+const mime = require('mime');
+
 app.use(bodyParser.json());
+app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
+const ffmpeg = require('ffmpeg');
 
-var basepath = './ML/Microsoft/'
-var samplePath = basepath + 'stevensample 16kHz 16bit mono.wav';
-var sample2 = basepath + 'steven2 16kHz 16bit mono.wav';
-var sample3 = basepath + 'sample3.wav';
+const {Downloader} = require('./ytdownload')
 
-const speechService = require('ms-bing-speech-service');
+const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
 
-const options = {
-  format: 'simple',
-  language: 'en-US',
-  subscriptionKey: MSKEY
+var firebase = require('firebase');
+
+var globalresponse = {};
+
+// Initialize firebase
+var config = {
+      apiKey: "AIzaSyD8H89VVKlhY6HE9t7kMYONXj80A1y3UYI",
+      authDomain: "romeo-2025b.firebaseapp.com",
+      databaseURL: "https://romeo-2025b.firebaseio.com",
+      projectId: "romeo-2025b",
+      storageBucket: ""
+};
+firebase.initializeApp(config);
+const keyFilename = './romeo-2025b-firebase-adminsdk-ssrw8-d611e232d1.json'
+const projectId = config.projectId;
+const bucketName = `${projectId}.appspot.com`;
+
+const gcs = require('@google-cloud/storage')({
+      projectId,
+      keyFilename
+});
+
+const bucket = gcs.bucket(bucketName);
+function createPublicFileURL(storageName) {
+      return `http://storage.googleapis.com/${bucketName}/${encodeURIComponent(storageName)}`;
 }
 
-const socket = new speechService(options);
+// var looong16khz = basepath + 'steven2 16kHz 16bit mono.wav';
+var ffmpegpath = "./audio/processedaudio/newman.wav";
 
-socket.start((error, service) =>{
-  console.log('service started');
+var audiodest = './audio/processedaudio/'
+var processingObj = {
+      audio: "", // audio file, hopefully wav
+      transcript: "",
+      scores: {},
+      score: ""
+}
 
-  service.on('recognition', (e) => {
-    if (e.RecognitionStatus === 'Success') console.log(e);
-  });
+const fileUpload = require('express-fileupload');
+app.use(fileUpload());
 
-  // optional telemetry events to listen to
-  service.on('speech.startDetected', () => console.log('speech start detected'));
-  service.on('speech.endDetected', () => console.log('speech end detected'));
-  service.on('turn.start', () => console.log('speech turn started', service.turn.active));
+app.post('/rendition', (req, res) => {
+      globalresponse = res;
+      var writepath = "./audio/processedaudio/anthonytest.wav";
 
-  service.on('turn.end', () => {
-    console.log('speech turn ended');
-  });
+      if (!req.files) return res.status(400).send('No files were uploaded');
 
-  // service.sendFile(samplePath);
-  // service.sendFile(sample2)
-  service.sendFile(sample3);
+      console.log("req.files:\n" + util.inspect(req.files, false, null));
+      let speechAudio = req.files.audio;
+
+      speechAudio.mv(writepath, function(err) {
+            if (err) return res.status(500).send(err);
+            downsample(writepath, res);
+      })
+
+});
+
+app.post('/challenge', (req, res) => {
+      globalresponse = res;
+      var dl = new Downloader();
+      var video_url = req.body.video_url;
+
+      var temp = "";
+      var write = false;
+      for (var i = 0; i < video_url.length; i++) {
+            if (video_url[i]=== '=') {
+                  write = true;
+                  continue;
+            }
+            if (video_url[i]==='/' && write) {
+                  break;
+            }
+            if (write) {
+                  temp+= video_url[i];
+            }
+      }
+      video_url = temp;
+      console.log("Video url: " + video_url);
+
+      dl.getMP3({videoId: video_url, name:"ytdload.mp3"}, function (err, res) {
+            if(err)
+            throw err;
+            else{
+                  console.log("Song " + i + " was downloaded: " + res.file);
+                  downsample(res.file, 'foryt');
+            }
+      });
 })
 
-/*
-const recognizer = new speechService(options);
-recognizer.start((error, service) => {
-  if (!error) {
-    console.log('service started');
+// processingObj.audio = req.body.audio;
+function downsample(starting_audio_path, res, uploadname) {
+      console.log("start encode time: " + Date.now())
 
-    service.on('recognition', (message) => {
-      console.log('new recognition:', message);
-    });
+      var process = new ffmpeg(starting_audio_path);
+      process
+      .then(function(audio) {
+            console.log("Audio file metadata:" + audio.metadata)
+            console.log('The audio is ready to be processed');
+            audio
+            .setAudioFrequency(16000)
+            .setAudioChannels(1)
+            .setAudioBitRate(16)
+            .save("./audio/processedaudio/anthonytest2.wav", function (err, file) {
+                  if (!err)
+                  console.log('Audio file: ' + file);
+                  else
+                  console.error("err while saving\n" + err);
+                  // below will crash the program when the chunk error comes back
+                  // performAnalysis("./audio/processedaudio/anthonytest2.wav");
+                  setTimeout(function() {
+                        msanalysis("./audio/processedaudio/anthonytest2.wav", res, uploadname);
+                  }, 200);
+            });
+            console.log("end encode time: " + Date.now());
+      }).catch(function(err) {
+            console.log("Error: " + err);
+      });
+};
 
-    service.on('close', () => {
-      console.log('Speech API connection closed');
-    });
+function performAnalysis(path_to_audio) {
 
-    service.on('error', (error) => {
-      console.log(error);
-    });
+      console.log("start analysis time: " + Date.now())
 
-    service.sendFile(samplePath);
-  }
+      var Analyzer = require('./analyzer-v3')
+
+      var analyzer = new Analyzer(BEYONDKEY);
+
+      analyzer.analyze(fs.createReadStream(path_to_audio),function(err,analysis){
+            if (err) {
+                  console.error(err);
+            }
+            console.log(analysis);
+            console.log("end analysis time: " + Date.now());
+      });
+}
+
+// MICROSOFT SPEECH TO TEXT THINGS
+
+const options = {
+      language: 'en-US',
+      subscriptionKey: MICROSOFT_KEY
+}
+const speechService = require('ms-bing-speech-service');
+const socket = new speechService(options);
+
+var dictation_text = "";
+
+function msanalysis(ffmpegpath, res, uploadname) {
+      socket.start((error, service) =>{
+            console.log('service started');
+
+            service.on('recognition', (e) => {
+                  if (e.RecognitionStatus === 'Success') {
+                        console.log("status" + e);
+                        dictation_text+=e.DisplayText;
+                  }
+            });
+            service.on('error', (error) => {
+                  console.log("Error in MS Analysis"+error);
+            });
+            service.on('speech.startDetected', () => {
+                  console.log('speech startDetected has fired.');
+            });
+            service.on('speech.endDetected', () => {
+                  console.log('speech endDetected has fired.');
+            });
+
+            // optional telemetry events to listen to
+            service.on('speech.startDetected', () => console.log('speech start detected'));
+            service.on('speech.endDetected', () => console.log('speech end detected'));
+            service.on('turn.start', () => console.log('speech turn started', service.turn.active));
+
+            service.on('turn.end', () => {
+                  console.log('speech turn ended. text is:\n'+dictation_text);
+
+                  const filePath = ffmpegpath;
+                  const uploadTo = `audio/processedaudio.wav`;
+                  const fileMime = mime.getType(filePath);
+
+                  bucket.upload(filePath,{
+                        destination:uploadTo,
+                        public:true,
+                        metadata: {contentType: fileMime,cacheControl: "public, max-age=300"}
+                  }, function(err, file) {
+                        if(err) {
+                              console.log(err);
+                              return;
+                        }
+                        console.log(createPublicFileURL(uploadTo));
+                  })
+
+                  if (uploadname === undefined) {
+                        uploadname = 'romeoaudio';
+                        uploadname+= Date.now();
+                  }
+
+                  var publicURL = createPublicFileURL(uploadname);
+                  console.log("public url: " + publicURL);
+
+                  var returnobj = {
+                        audio_url: publicURL, // fill in with aws link
+                        transcript: dictation_text,
+                        score: 'B'
+                  }
+                  console.log("res is of type: " + typeof(res));
+                  // send back to app
+                  globalresponse.status(200).json(returnobj);
+            });
+
+            // service.sendFile(samplePath);
+            // service.sendFile(sample2)
+            // service.sendFile(looong16khz);
+            service.sendFile(ffmpegpath);
+      })
+}
+
+return new Promise((resolve, reject) => {
+      server = app.listen(8080, () => {
+            console.log(`Your app is listening on port 8080`);
+            resolve();
+      })
+      fs.unlink("./audio/processedaudio/anthonytest2.wav", () => {
+
+      })
+      fs.unlink("./audio/processedaudio/anthonytest.wav", () => {
+
+      })
+
 });
-*/
