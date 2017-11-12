@@ -14,6 +14,7 @@ const {Downloader} = require('./ytdownload')
 
 var firebase = require('firebase');
 
+var globalresponse = {};
 
 // Initialize firebase
 var config = {
@@ -62,6 +63,7 @@ const fileUpload = require('express-fileupload');
 app.use(fileUpload());
 
 app.post('/rendition', (req, res) => {
+  globalresponse = res;
   var writepath = "./audio/processedaudio/anthonytest.wav";
 
   if (!req.files)
@@ -79,6 +81,7 @@ app.post('/rendition', (req, res) => {
 });
 
 app.post('/challenge', (req, res) => {
+  globalresponse = res;
   var dl = new Downloader();
   var video_url = req.body.video_url;
 
@@ -104,7 +107,7 @@ app.post('/challenge', (req, res) => {
           throw err;
       else{
           console.log("Song " + i + " was downloaded: " + res.file);
-          downsample(res.file, res, 'foryt');
+          downsample(res.file, 'foryt');
       }
   });
 })
@@ -236,7 +239,7 @@ const socket = new speechService(options);
 
 var dictation_text = "";
 
-function msanalysis(ffmpegpath, res, uploadname= "") {
+function msanalysis(ffmpegpath, res, uploadname) {
   socket.start((error, service) =>{
     console.log('service started');
 
@@ -282,7 +285,7 @@ function msanalysis(ffmpegpath, res, uploadname= "") {
         console.log(createPublicFileURL(uploadTo));
       })
 
-      if (uploadname.length === 0) {
+      if (uploadname === undefined) {
         uploadname = 'romeoaudio';
       }
 
@@ -294,9 +297,9 @@ function msanalysis(ffmpegpath, res, uploadname= "") {
         transcript: dictation_text,
         score: 'B'
       }
-
-      // send back to him
-      res.status(200).json(returnobj);
+      console.log("res is of type: " + typeof(res));
+      // send back to app
+      globalresponse.status(200).json(returnobj);
     });
 
     // service.sendFile(samplePath);
