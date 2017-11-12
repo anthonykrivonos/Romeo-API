@@ -30,5 +30,8 @@
     "xhr": "^2.4.0",
     "youtube-mp3": "^0.1.2",
     "youtube-mp3-downloader": "^0.5.1"
+  },
+  "devDependencies": {
+    "firebase": "^4.6.2"
   }
 }

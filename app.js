@@ -9,6 +9,21 @@ app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 app.use(morgan('common'));
 
+
+var firebase = require('firebase');
+
+
+// Initialize firebase
+var config = {
+  apiKey: "AIzaSyD8H89VVKlhY6HE9t7kMYONXj80A1y3UYI",
+  authDomain: "romeo-2025b.firebaseapp.com",
+  databaseURL: "https://romeo-2025b.firebaseio.com",
+  projectId: "romeo-2025b",
+  storageBucket: ""
+};
+firebase.initializeApp(config);
+
+
 // app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 
 const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
@@ -59,27 +74,6 @@ app.post('/rendition', (req, res) => {
 });
 // processingObj.audio = req.body.audio;
 function downsample(starting_audio_path, res) {
-  // start processing
-  // reason for this section:
-  // https://stackoverflow.com/questions/40233300/how-to-change-mp3-file-to-wav-file-in-node-js
-  // might not need due to file coming in as a WAV
-  // ffmpeg2(starting_audio_path)
-  //   .toFormat('wav')
-  //   .on('error', function (err) {
-  //       console.log('An error occurred: ' + err.message);
-  //   })
-  //   .on('progress', function (progress) {
-  //       // console.log(JSON.stringify(progress));
-  //       console.log('Processing: ' + progress.targetSize + ' KB converted');
-  //   })
-  //   .on('end', function () {
-  //       console.log('Processing finished !');
-  //       ffmpegmain("./audio/processedaudio/shouldbe_correct.wav");
-  //   })
-  //   .save(sample3_mp3 + '.wav', function() {
-  //     sample3_mp3 += '.wav';
-  //   })
-
   try {
     console.log("start encode time: " + Date.now())
 
@@ -111,7 +105,6 @@ function downsample(starting_audio_path, res) {
     console.log(e.code);
     console.log(e.msg);
   }
-
 };
 
 
@@ -239,6 +232,13 @@ function msanalysis(ffmpegpath, res) {
         transcript: dictation_text,
         score: 'B'
       }
+
+      var storageRef = firebase.storage().ref();
+      var mountainsRef = storageRef.child(ffmpegpath);
+      var file = new File()
+      ref.put()
+
+
       // send back to him
       res.status(200).json(returnobj);
     });

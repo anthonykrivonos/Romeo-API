@@ -44,14 +44,11 @@ var Downloader = function() {
 };
 
 Downloader.prototype.getMP3 = function(track, callback){
-
     var self = this;
-
     // Register callback
     self.callbacks[track.videoId] = callback;
     // Trigger download
     self.YD.download(track.videoId, track.name);
-
 };
 
 module.exports = Downloader;
@@ -66,6 +63,87 @@ dl.getMP3({videoId: "EUGeQd6J968", name:"weeknd_dank.mp3"}, function (err, res) 
     i++;
     if(err)
         throw err;
-    else
+    else{
         console.log("Song " + i + " was downloaded: " + res.file);
+        downsample(res.file);
+    }
 });
+
+// lower sample
+function downsample(starting_audio_path) {
+  try {
+    console.log("start encode time: " + Date.now())
+
+    var process = new ffmpeg(starting_audio_path);
+    process
+      .then(function(audio) {
+        console.log(audio.metadata)
+        console.log('The audio is ready to be processed');
+        audio
+          .setAudioFrequency(16000)
+          .setAudioChannels(1)
+          .setAudioBitRate(16)
+          .save("./audio/processedaudio/anthonytest2.wav", function (err, file) {
+            if (!err)
+              console.log('Audio file: ' + file);
+            else
+              console.error("err while saving\n" + err);
+            // below will crash the program when the chunk error comes back
+            // performAnalysis("./audio/processedaudio/anthonytest2.wav");
+            setTimeout(function() {
+              msanalysis("./audio/processedaudio/anthonytest2.wav", res);
+            }, 200);
+          })
+          console.log("end encode time: " + Date.now());
+      }, function(err) {
+        console.log("Error: " + err);
+      });
+  } catch (e) {
+    console.log(e.code);
+    console.log(e.msg);
+  }
+
+};
+
+function msanalysis(ffmpegpath) {
+  socket.start((error, service) =>{
+    console.log('service started');
+
+    service.on('recognition', (e) => {
+      if (e.RecognitionStatus === 'Success') {
+        console.log(e);
+        dictation_text+=e.DisplayText;
+      }
+    });
+    service.on('error', (error) => {
+      console.log(error);
+    });
+    service.on('speech.startDetected', () => {
+      console.log('speech startDetected has fired.');
+    });
+    service.on('speech.endDetected', () => {
+      console.log('speech endDetected has fired.');
+    });
+
+    // optional telemetry events to listen to
+    service.on('speech.startDetected', () => console.log('speech start detected'));
+    service.on('speech.endDetected', () => console.log('speech end detected'));
+    service.on('turn.start', () => console.log('speech turn started', service.turn.active));
+
+    service.on('turn.end', () => {
+      console.log('speech turn ended. text is:\n'+dictation_text);
+      // do AWS upload of data
+      var returnobj = {
+        audio_url: "testdata", // fill in with aws link
+        transcript: dictation_text,
+        score: 'B'
+      }
+      // send back to him
+    });
+
+    // service.sendFile(samplePath);
+    // service.sendFile(sample2)
+    // service.sendFile(looong16khz);
+    service.sendFile(ffmpegpath);
+  })
+}
