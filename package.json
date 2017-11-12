@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.0.13",
     "@google-cloud/storage": "^1.4.0",
     "audio-resampler": "^1.0.1",
     "audiobuffer-to-wav": "^1.0.0",
