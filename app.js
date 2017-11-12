@@ -7,7 +7,7 @@ const fs = require('fs');
 app.use(bodyParser.json());
 app.use(morgan('common'));
 
-const {MSKEY, BEYONDKEY} = require('./config');
+const {BEYONDKEY} = require('./config');
 
 var basepath = './ML/Microsoft/';
 var sample3_mp3 = basepath + 'looooong.m4a';
@@ -16,28 +16,54 @@ var looong16khz = basepath + 'audition-lowqual.wav';
 var audiodest = './audio/processedaudio/'
 
 var ffmpeg = require('ffmpeg');
+var ffmpeg2 = require('fluent-ffmpeg');
 
 var performAnalysis = true;
 
 if (!performAnalysis) {
+
+  // reason for this section:
+  // https://stackoverflow.com/questions/40233300/how-to-change-mp3-file-to-wav-file-in-node-js
+  ffmpeg2(sample3_mp3)
+    .toFormat('wav')
+    .on('error', function (err) {
+        console.log('An error occurred: ' + err.message);
+    })
+    .on('progress', function (progress) {
+        // console.log(JSON.stringify(progress));
+        console.log('Processing: ' + progress.targetSize + ' KB converted');
+    })
+    .on('end', function () {
+        console.log('Processing finished !');
+        ffmpegmain("./audio/processedaudio/shouldbe_correct.wav");
+    })
+    .save(sample3_mp3 + '.wav', function() {
+      sample3_mp3 += '.wav';
+    })
+}
+function ffmpegmain(inputAudio) {
   try {
-    var process = new ffmpeg(looong16khz);
-    process.then(function(audio) {
-      console.log('The audio is ready to be processed');
-      audio
-        // .setAudioCodec('pcm_f16le') // causes an error... look into this
-        .setAudioFrequency(16000)
-        .setAudioChannels(1)
-        .setAudioBitRate(16)
-        .save(audiodest + "modified3.wav", function (err, file) {
-          if (!err)
-            console.log('Audio file: ' + file);
-          else
-            console.error("err while saving\n" + err);
-        })
-    }, function(err) {
-      console.log("Error: " + err);
-    });
+    console.log("start encode time: " + Date.now())
+
+    var process = new ffmpeg(inputAudio);
+    process
+      .then(function(audio) {
+        console.log(audio.metadata)
+        console.log('The audio is ready to be processed');
+        audio
+          .setAudioFrequency(8000)
+          .setAudioChannels(1)
+          .setAudioBitRate(16)
+          .save(audiodest + "newman.wav", function (err, file) {
+            if (!err)
+              console.log('Audio file: ' + file);
+            else
+              console.error("err while saving\n" + err);
+          })
+          console.log("end encode time: " + Date.now());
+      }, function(err) {
+        console.log("Error: " + err);
+      });
   } catch (e) {
     console.log(e.code);
     console.log(e.msg);
@@ -46,19 +72,19 @@ if (!performAnalysis) {
 
 if (performAnalysis) {
 
-  console.log("start analysis time: "+Date.now())
+  console.log("start analysis time: " + Date.now())
 
   var Analyzer = require('./analyzer-v3')
 
   var analyzer = new Analyzer(BEYONDKEY);
-  var ffmpegpath = "./audio/processedaudio/modified3.wav";
+  var ffmpegpath = "./audio/processedaudio/newman.wav";
 
   analyzer.analyze(fs.createReadStream(ffmpegpath),function(err,analysis){
     if (err) {
       console.error(err);
     }
     console.log(analysis);
-    console.log("end  analysis time: "+Date.now());
+    console.log("end analysis time: " + Date.now());
    });
 
 }
@@ -66,56 +92,3 @@ if (performAnalysis) {
 /*
 // TODO: MOVE AUDIO FORMATTING STUFF TO ITS OWN FILE
 var audioStack = [];
-
-// https://www.npmjs.com/package/node-wav
-let wav = require('node-wav');
-
-let buffer = fs.readFileSync('')
-
-audioContext.decodeAudioData(resp, buffer => {
-  let wav = toWav(buffer);
-  var chunk = new Uint8Array(wav);
-  // console.log(chunk);
-  fs.appendFile((basepath + 'bb.wav'), new Buffer(chunk), function(err) {
-    console.error(err);
-  });
-});
-
-
-// TODO: MOVE THIS STUFF TO ITS OWN FILE
-basepath = './ML/Microsoft/'
-var samplePath = basepath + 'stevensample 16kHz 16bit mono.wav';
-var sample2 = basepath + 'steven2 16kHz 16bit mono.wav';
-var sample3 = basepath + 'sample3.wav';
-
-const speechService = require('ms-bing-speech-service');
-
-const options = {
-  format: 'simple',
-  language: 'en-US',
-  subscriptionKey: MSKEY
-}
-
-const socket = new speechService(options);
-
-socket.start((error, service) =>{
-  console.log('service started');
-
-  service.on('recognition', (e) => {
-    if (e.RecognitionStatus === 'Success') console.log(e);
-  });
-
-  // optional telemetry events to listen to
-  service.on('speech.startDetected', () => console.log('speech start detected'));
-  service.on('speech.endDetected', () => console.log('speech end detected'));
-  service.on('turn.start', () => console.log('speech turn started', service.turn.active));
-
-  service.on('turn.end', () => {
-    console.log('speech turn ended');
-  });
-
-  // service.sendFile(samplePath);
-  // service.sendFile(sample2)
-  // service.sendFile(sample3);
-});
-*/
