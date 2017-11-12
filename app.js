@@ -46,7 +46,7 @@ function createPublicFileURL(storageName) {
 
 // app.use(bodyParser.raw({ type: 'audio/wav', limit: '50mb' }));
 
-const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
+// const {MICROSOFT_KEY, BEYONDKEY} = require('./config');
 // var ffmpeg = require('ffmpeg');
 // var ffmpeg2 = require('fluent-ffmpeg');
 
